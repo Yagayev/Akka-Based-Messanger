@@ -1,7 +1,8 @@
-package example.akka.remote.server;
+package messenger.akka.server;
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
-import example.akka.remote.shared.*;
+import messenger.akka.shared.*;
+
 import java.util.HashMap;
 
 public class AddressBookActor extends UntypedActor {
@@ -20,7 +21,7 @@ public class AddressBookActor extends UntypedActor {
                 getSender().tell(new SuccessfulLoginMessage(username), getSelf());
             }
         }
-        else if(msg instanceof  AddressQueryMessage){
+        else if(msg instanceof AddressQueryMessage){
             AddressQueryMessage aqm = (AddressQueryMessage) msg;
             ActorRef target = addresses.get(aqm.username);
             if(target == null){

@@ -1,6 +1,4 @@
-package example.akka.remote.shared;
-
-import akka.actor.Cancellable;
+package messenger.akka.shared;
 
 public class GroupUnmuteMessage  extends GroupMessage  {
     public String userToUnmute;

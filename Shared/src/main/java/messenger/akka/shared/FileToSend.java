@@ -1,4 +1,4 @@
-package example.akka.remote.shared;
+package messenger.akka.shared;
 
 public class FileToSend extends MessageToSend{
     public String path;

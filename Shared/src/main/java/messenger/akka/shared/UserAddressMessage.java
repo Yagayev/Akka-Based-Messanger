@@ -1,4 +1,4 @@
-package example.akka.remote.shared;
+package messenger.akka.shared;
 
 import akka.actor.ActorRef;
 import java.io.Serializable;

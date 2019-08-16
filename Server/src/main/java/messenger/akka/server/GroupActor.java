@@ -1,19 +1,18 @@
-package example.akka.remote.server;
+package messenger.akka.server;
 
 import akka.actor.ActorRef;
 import akka.actor.Cancellable;
 import akka.actor.Scheduler;
 import akka.actor.UntypedActor;
-import example.akka.remote.shared.*;
+import messenger.akka.shared.*;
 import scala.concurrent.duration.FiniteDuration;
-import java.time.Duration;
 
 import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import java.util.Collections;
+
 public class GroupActor extends UntypedActor {
     String groupName;
     String adminName;
@@ -32,13 +31,15 @@ public class GroupActor extends UntypedActor {
         users = new Vector<String>();
         muted = new HashMap<String, MutedUser>();
         pendingInvites = new Vector<String>();
-//        coAdmins.add(adminName);
         users.add(adminName);
     }
 
     public void onReceive(Object msg) throws Exception {
         if(msg instanceof GroupLeaveMessage){
             GroupLeaveMessage leave = (GroupLeaveMessage) msg;
+            if(!users.contains(leave.sender)){
+                return;
+            }
             if(adminName.equals(leave.sender)){
                 closeGroup();
             }

@@ -1,4 +1,4 @@
-package example.akka.remote.shared;
+package messenger.akka.shared;
 //TODO DELETE THIS
 public class GroupToCreateMessage extends Message{
     public String groupName;

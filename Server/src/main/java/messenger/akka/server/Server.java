@@ -1,4 +1,4 @@
-package example.akka.remote.server;
+package messenger.akka.server;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;

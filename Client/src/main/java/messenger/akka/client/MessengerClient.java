@@ -1,11 +1,9 @@
-package example.akka.remote.client;
+package messenger.akka.client;
 
 import akka.actor.ActorSelection;
-import akka.actor.Cancellable;
 import akka.actor.UntypedActor;
-import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import example.akka.remote.shared.*;
+import messenger.akka.shared.*;
 
 import java.io.*;
 import java.util.*;
@@ -22,7 +20,7 @@ public class MessengerClient extends UntypedActor {
 
     public MessengerClient(){
         loggedIn = false;
-        log = Logging.getLogger(getContext().system(), this);
+//        log = Logging.getLogger(getContext().system(), this);
         addressBook = getContext().actorSelection("akka.tcp://MessengerServer@127.0.0.1:2552/user/AddressBook");
         groupSystem = getContext().actorSelection("akka.tcp://MessengerServer@127.0.0.1:2552/user/GroupSystem");
         outgoingMessages = new HashMap<String, Queue<MessageToSend>>();
@@ -31,9 +29,14 @@ public class MessengerClient extends UntypedActor {
 
     @Override
     public void onReceive(Object message) throws Exception {
+        // handling Strings from the user
         if(message instanceof String){
             parseStr((String)message);
         }
+
+        // handling messages from the server
+        // double dispatch would be more sensible, but from the instruction to not do this
+        // in object oriented approach
         if(message instanceof LoginMessage){
             if(loggedIn){
                 Logger.log("info", "Already logged in!");
@@ -68,6 +71,9 @@ public class MessengerClient extends UntypedActor {
         else if(message instanceof UserAddressMessage){
             UserAddressMessage uam = (UserAddressMessage) message;
             Queue<MessageToSend> box = outgoingMessages.get(uam.username);
+
+            // sendong out all the awating messeges
+            // not using a stream because it makes more sense that the messeges will be sent in the order the user sent them
             while(!box.isEmpty()){
                 MessageToSend msg = box.poll();
                 if (msg instanceof UserMessageToSend){
@@ -85,6 +91,7 @@ public class MessengerClient extends UntypedActor {
         else if(message instanceof FileMessage){
             FileMessage fm = (FileMessage) message;
             File newFile = new File(fm.file.getName());
+            //save the file
             InputStream is = null;
             OutputStream os = null;
             try {
@@ -92,11 +99,11 @@ public class MessengerClient extends UntypedActor {
                 os = new FileOutputStream(newFile);
                 byte[] buffer = new byte[1024];
                 int length;
+
                 while ((length = is.read(buffer)) > 0) {
                     os.write(buffer, 0, length);
                 }
                 Logger.log("user", fm.sender, "File received: " + newFile.getPath());
-//                System.out.println("["+getTime()+"][user]["+fm.sender+"] File received: "+newFile.getPath());
             }
             catch (IOException e){
                 System.out.println("failed to recieve file");
@@ -111,15 +118,6 @@ public class MessengerClient extends UntypedActor {
 
 
         }
-//        else if(message instanceof  GroupToCreateMessage){
-//            GroupToCreateMessage groupMsg = (GroupToCreateMessage) message;
-//            groupSystem.tell(new GroupCreationMessage(groupMsg.groupName, username), getSelf());
-//        }
-//        else if(message instanceof GroupUserToAddMessage){
-//            GroupUserToAddMessage userToAddMsg = (GroupUserToAddMessage) message;
-//            groupSystem.tell(new GroupInviteUser(username, userToAddMsg.groupName, userToAddMsg.user), getSelf());
-//        }
-
         //the old implementation that couldn't work asynchronycally
 //        else if(message instanceof GroupInvitationMessage){
 //            GroupInvitationMessage invitation = (GroupInvitationMessage) message;
@@ -211,39 +209,24 @@ public class MessengerClient extends UntypedActor {
         }
 
         if(words[0].equals("/user")){
-            if(words[1].equals("text")){
-                if (words.length < 4){
-                    illegalInput();
-                    return;
-                }
+            if(words[1].equals("text") && words.length >= 4){
                 String target = words[2];
                 String[] msgWords = Arrays.copyOfRange(words, 3, words.length);
                 String msg = String.join(" ", msgWords);
                 commitUserMessage(new UserMessageToSend(target, msg));
                 return;
             }
-            else if(words[1].equals("file")){
-                if (words.length != 4){
-                    illegalInput();
-                    return;
-                }
+            else if(words[1].equals("file") && words.length == 4){
                 commitUserMessage(new FileToSend(words[2], words[3]));
                 return;
 
             }
-            else if(words[1].equals("connect")){
-                if (words.length < 3){
-                    illegalInput();
-                    return;
-                }
-                String[] msgWords = Arrays.copyOfRange(words, 2, words.length);
-                String msg = String.join(" ", msgWords);
-
+            else if(words[1].equals("connect") && words.length == 3){
                 if(loggedIn){
-                    log.info("Already logged in!");
+                    Logger.log("info", "Already logged in!");
                     return;
                 }
-                addressBook.tell(new LoginMessage(msg), getSelf());
+                addressBook.tell(new LoginMessage(words[2]), getSelf());
                 return;
             }
             else if(words[1].equals("disconnect")&&words.length==2){
@@ -253,29 +236,14 @@ public class MessengerClient extends UntypedActor {
             }
         }
         else if(words[0].equals("/group")){
-            if(words[1].equals("create")){
-                if (words.length < 3){
-                    illegalInput();
-                    return;
-                }
-                String[] msgWords = Arrays.copyOfRange(words, 2, words.length);
-                String msg = String.join(" ", msgWords);
-//                GroupToCreateMessage groupMsg = new GroupToCreateMessage(msg);
-                groupSystem.tell(new GroupCreationMessage(msg, username), getSelf());
+            if(words[1].equals("create") && words.length == 3){
+
+                groupSystem.tell(new GroupCreationMessage(words[2], username), getSelf());
 
                 return;
             }
             if(words[1].equals("user")&&words.length==5&&words[2].equals("invite")){
-//                if (words.length < 4){
-//                    return null;
-//                }
-//                String[] msgWords = Arrays.copyOfRange(words, 3, words.length);
-//                String userToInvite = String.join(" ", msgWords);
-
                 groupSystem.tell(new GroupInviteUser(username, words[3], words[4]), getSelf());
-                // so far I didn't limit neither username nor group name to not
-                // have spaces, but it seems here it can't be done
-                // without ambiguity
 
                 return;
             }

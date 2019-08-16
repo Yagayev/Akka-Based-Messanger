@@ -1,6 +1,4 @@
-package example.akka.remote.shared;
-
-import java.io.Serializable;
+package messenger.akka.shared;
 
 public abstract class MessageToSend extends Message {
     public String target;
